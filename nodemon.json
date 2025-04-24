@@ -1,0 +1,7 @@
+{
+  "watch": ["dist"],
+  "ext": "js,json",
+  "ignore": ["dist/**/*.spec.js"],
+  "delay": "1000",
+  "exec": "node dist/index.js"
+}

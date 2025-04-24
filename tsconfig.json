@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext", // Changed from commonjs to NodeNext for proper ES module support with Node.js
+    "moduleResolution": "NodeNext", // Changed from node to NodeNext
+    "rootDir": "src",
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true // Added this from the generated file
+  },
+  "include": ["src/**/*"], // Added to specify input files
+  "exclude": ["node_modules", "dist"] // Added to exclude unnecessary directories
+}
