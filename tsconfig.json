@@ -8,7 +8,8 @@
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true // Added this from the generated file
+    "forceConsistentCasingInFileNames": true, // Added this from the generated file
+    "types": ["node"] // Add this to restrict TypeScript to only use Node.js global types
   },
   "include": ["src/**/*"], // Added to specify input files
   "exclude": ["node_modules", "dist"] // Added to exclude unnecessary directories

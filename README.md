@@ -30,8 +30,9 @@ It provides a `create_image` tool that takes a text prompt and other parameters,
 
 2.  **Install Dependencies:**
     ```bash
-    npm install
+    npm ci
     ```
+    This command installs exact versions from package-lock.json, ensuring consistent dependencies.
 
 3.  **Build the Server:**
     ```bash
