@@ -23,7 +23,7 @@ config(); // Load .env file if present (though MCP client injects it)
 // --- Tool Definition ---
  const CREATE_IMAGE_TOOL: Tool = {
    name: 'create_image',
-   description: `Generates a new image based on a text prompt using OpenAI's DALL-E 3 or gpt-image-1 model, optionally applying branding guidelines. Saves the image to the target project's public folder (or server's public folder if target not specified) and returns the relative path within that public folder.`,
+   description: `Generates a new image based on a text prompt using OpenAI's DALL-E 3 or gpt-image-1 model, optionally applying branding guidelines. Saves the image to the target project's public folder (or server's public folder if target not specified) and returns the relative path within that public folder. For advanced prompt templates, recipe examples, and creative formatting techniques to produce exceptional images, see docs/prompt-recipes.md.`,
    // Convert Zod schema to JSON Schema for MCP and cast to 'any' to satisfy SDK type
    inputSchema: zodToJsonSchema(imageReqSchema, "imageReqSchema") as any, // Reflects updated imageReqSchema
  };
