@@ -9,24 +9,32 @@ import {
   Tool, // Import Tool type
 } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod'; // Keep zod for input validation
-import { zodToJsonSchema } from 'zod-to-json-schema'; // Import converter
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { config } from 'dotenv';
-import { imageReqSchema, ImageRequest } from './types/image.js'; // Import schema and type
-import { openai } from './lib/openaiClient.js';
+import { imageReqSchema, ImageRequest } from './types/image.js';
+import { getOpenAIClient } from './lib/openaiClient.js'; // Import the function
 import { buildPrompt } from './lib/promptBuilder.js';
 import { save } from './lib/fileSaver.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+console.error("[MCP DEBUG] Server script started."); // Log start
+
 config(); // Load .env file if present (though MCP client injects it)
+console.error("[MCP DEBUG] dotenv config loaded."); // Log dotenv
 
 // --- Tool Definition ---
- const CREATE_IMAGE_TOOL: Tool = {
-   name: 'create_image',
-   description: `Generates a new image based on a text prompt using OpenAI's DALL-E 3 or gpt-image-1 model, optionally applying branding guidelines. Saves the image to the target project's public folder (or server's public folder if target not specified) and returns the relative path within that public folder. For advanced prompt templates, recipe examples, and creative formatting techniques to produce exceptional images, see docs/prompt-recipes.md.`,
-   // Convert Zod schema to JSON Schema for MCP and cast to 'any' to satisfy SDK type
-   inputSchema: zodToJsonSchema(imageReqSchema, "imageReqSchema") as any, // Reflects updated imageReqSchema
- };
+// Generate the full JSON schema including definitions
+const fullJsonSchema = zodToJsonSchema(imageReqSchema, "imageReqSchema");
+// Extract the core schema definition that Cline expects (with top-level "type": "object")
+const inputSchemaForCline = fullJsonSchema.definitions?.imageReqSchema ?? { type: 'object' }; // Fallback just in case
+
+const CREATE_IMAGE_TOOL: Tool = {
+  name: 'create_image',
+  description: 'Generates an image using OpenAI (DALL-E 3 / gpt-image-1) based on a detailed text prompt. For best results, provide vivid descriptions incorporating style, composition, lighting, and mood. Refer to \'docs/prompt-recipes.md\' for extensive examples, templates, and tips for various image types (hero backgrounds, icons, illustrations, photos). Key parameters include \'prompt\', \'brandSignature\' (use project palette), \'size\' (e.g., 1024x1024, 1536x1024), \'quality\', \'model\', \'filename\', \'outputPath\', and \'targetProjectDir\'.',
+  // Use the extracted schema object
+  inputSchema: inputSchemaForCline as any, // Cast to any to satisfy SDK type
+};
 
 // --- Server Class ---
 class ImageMcpServer {
@@ -36,6 +44,7 @@ class ImageMcpServer {
   private __dirname = path.dirname(this.__filename);
 
   constructor() {
+    console.error("[MCP DEBUG] ImageMcpServer constructor entered."); // Log constructor start
     this.server = new Server(
       {
         // Use a more specific name if desired
@@ -44,10 +53,12 @@ class ImageMcpServer {
       },
       {
         capabilities: {
-          tools: {}, // Tools are listed via handler
+          // Also list the tool here for redundancy/potential initialization timing issues
+          tools: { [CREATE_IMAGE_TOOL.name]: CREATE_IMAGE_TOOL }, 
         },
       }
     );
+    console.error("[MCP DEBUG] MCP SDK Server instance created."); // Log SDK server creation
 
      this.setupToolHandlers();
 
@@ -60,10 +71,15 @@ class ImageMcpServer {
   }
 
   private setupToolHandlers() {
+    console.error("[MCP DEBUG] setupToolHandlers entered."); // Log handler setup start
     // Handler for listing available tools
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [CREATE_IMAGE_TOOL],
-    }));
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      console.error("[MCP DEBUG] ListToolsRequest received. Returning tools:", JSON.stringify([CREATE_IMAGE_TOOL])); // Log before returning tools
+      return {
+        tools: [CREATE_IMAGE_TOOL],
+      };
+    });
+    console.error("[MCP DEBUG] ListTools handler set."); // Log handler set
 
     // Handler for executing the tool call
     this.server.setRequestHandler(CallToolRequestSchema, async (request: any) => { // Explicit any type
@@ -107,6 +123,9 @@ class ImageMcpServer {
 
         const finalPrompt = buildPrompt(input.prompt, brandSignature);
 
+        // Get OpenAI client instance when needed
+        const openai = getOpenAIClient(); 
+        
         // Call OpenAI API
         const rsp = await openai.images.generate({
           model: input.model ?? 'dall-e-3', // Keep dall-e-3 fallback
@@ -180,15 +199,19 @@ class ImageMcpServer {
 
   // Start the server and connect transport
   async run() {
+    console.error("[MCP DEBUG] run() method entered."); // Log run start
     const transport = new StdioServerTransport();
+    console.error("[MCP DEBUG] StdioServerTransport created."); // Log transport creation
     await this.server.connect(transport);
+    console.error("[MCP DEBUG] Server connected to transport. Waiting for requests..."); // Log connection success
     // No console.log here for stdio transport
-    // console.error('Image MCP server running on stdio'); // Use stderr for logs if needed
   }
 }
 
 // Instantiate and run the server
+console.error("[MCP DEBUG] Instantiating ImageMcpServer..."); // Log instantiation
 const serverInstance = new ImageMcpServer();
+console.error("[MCP DEBUG] ImageMcpServer instantiated. Calling run()..."); // Log before run
 serverInstance.run().catch(error => {
     console.error("Fatal error running Image MCP server:", error);
     process.exit(1);
