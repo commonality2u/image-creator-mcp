@@ -17,6 +17,8 @@ import { buildPrompt } from './lib/promptBuilder.js';
 import { save } from './lib/fileSaver.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
+import { toFile } from 'openai';
 
 console.error("[MCP DEBUG] Server script started."); // Log start
 
@@ -31,7 +33,7 @@ const inputSchemaForCline = fullJsonSchema.definitions?.imageReqSchema ?? { type
 
 const CREATE_IMAGE_TOOL: Tool = {
   name: 'create_image',
-  description: 'Generates an image using OpenAI (DALL-E 3 / gpt-image-1) based on a detailed text prompt. For best results, provide vivid descriptions incorporating style, composition, lighting, and mood. Refer to \'docs/prompt-recipes.md\' for extensive examples, templates, and tips for various image types (hero backgrounds, icons, illustrations, photos). Key parameters include \'prompt\', \'brandSignature\' (use project palette), \'size\' (e.g., 1024x1024, 1536x1024), \'quality\', \'model\', \'filename\', \'outputPath\', and \'targetProjectDir\'.',
+  description: 'Generates an image using OpenAI (DALL-E 3 / gpt-image-1) based on a detailed text prompt. For best results, provide vivid descriptions incorporating style, composition, lighting, and mood. Can also edit or combine existing images by providing referenceImagePaths. Refer to \'docs/prompt-recipes.md\' for extensive examples, templates, and tips for various image types (hero backgrounds, icons, illustrations, photos). Key parameters include \'prompt\', \'brandSignature\' (use project palette), \'size\' (e.g., 1024x1024, 1536x1024), \'quality\', \'model\', \'filename\', \'outputPath\', \'targetProjectDir\', and \'referenceImagePaths\' (for editing/combining images).',
   // Use the extracted schema object
   inputSchema: inputSchemaForCline as any, // Cast to any to satisfy SDK type
 };
@@ -124,17 +126,77 @@ class ImageMcpServer {
         const finalPrompt = buildPrompt(input.prompt, brandSignature);
 
         // Get OpenAI client instance when needed
-        const openai = getOpenAIClient(); 
+        const openai = getOpenAIClient();
         
-        // Call OpenAI API
-        const rsp = await openai.images.generate({
-          model: input.model ?? 'dall-e-3', // Keep dall-e-3 fallback
-          prompt: finalPrompt,
-          size: input.size,
-          quality: input.quality, // Pass validated quality directly
-          n: 1,
-          // response_format defaults to b64_json for Node client
-        });
+        let rsp;
+        
+        // Check if reference images are provided
+        if (input.referenceImagePaths && input.referenceImagePaths.length > 0) {
+          console.error("[MCP DEBUG] Using images.edit with reference images:", input.referenceImagePaths);
+          
+          // Determine base directory for reference images
+          const baseDir = input.targetProjectDir ?? process.cwd();
+          const publicDir = path.resolve(baseDir, 'public');
+          
+          // Load reference images
+          const images = await Promise.all(
+            input.referenceImagePaths.map(async (imagePath) => {
+              // Resolve full path to the image (relative to public directory)
+              const fullImagePath = path.resolve(publicDir, imagePath);
+              console.error(`[MCP DEBUG] Loading reference image from ${fullImagePath}`);
+              
+              // Determine MIME type based on file extension
+              const ext = path.extname(fullImagePath).toLowerCase();
+              const mimeType = ext === '.png' ? 'image/png' : 
+                              ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' :
+                              ext === '.webp' ? 'image/webp' : 'image/png'; // Default to PNG
+              
+              try {
+                // Create a readable stream for the image file
+                const stream = fs.createReadStream(fullImagePath);
+                // Convert to OpenAI compatible format
+                return await toFile(stream, path.basename(fullImagePath), { type: mimeType });
+              } catch (err: any) {
+                console.error(`[MCP ERROR] Failed to load reference image ${fullImagePath}:`, err);
+                throw new Error(`Failed to load reference image ${imagePath}: ${err.message || 'Unknown error'}`);
+              }
+            })
+          );
+          
+          // Ensure we'll use gpt-image-1 for edit operations
+          const editModel = 'gpt-image-1';
+          if (input.model && input.model !== editModel) {
+            console.error(`[MCP DEBUG] Overriding model ${input.model} with ${editModel} for image edit operation`);
+          }
+          
+          // Call OpenAI images.edit API
+          rsp = await openai.images.edit({
+            model: editModel, // Always use gpt-image-1 for edits
+            image: images, // Pass the loaded reference images
+            prompt: finalPrompt,
+            background: input.background, // Directly include background parameter
+            n: 1,
+            // size is not supported in edit operations
+            // response_format defaults to b64_json
+          } as any); // Type assertion to bypass TypeScript checking
+          
+          console.error("[MCP DEBUG] Successfully completed images.edit call");
+        } else {
+          console.error("[MCP DEBUG] Using images.generate (no reference images)");
+          
+          // Call OpenAI images.generate API (existing functionality)
+          rsp = await openai.images.generate({
+            model: input.model ?? 'dall-e-3', // Keep dall-e-3 fallback
+            prompt: finalPrompt,
+            size: input.size,
+            quality: input.quality, // Pass validated quality directly
+            background: input.background, // Directly include background parameter
+            n: 1,
+            // response_format defaults to b64_json for Node client
+          });
+          
+          console.error("[MCP DEBUG] Successfully completed images.generate call");
+        }
 
         // Validate response and get image data
         if (!rsp.data?.[0]?.b64_json) {
@@ -161,9 +223,11 @@ class ImageMcpServer {
           ok: true,
           path: relativePath,
           bytes: imgBytes.length,
-          model: input.model ?? 'dall-e-3',
+          model: input.referenceImagePaths && input.referenceImagePaths.length > 0 ? 'gpt-image-1' : (input.model ?? 'dall-e-3'),
           prompt: finalPrompt,
           revised_prompt: rsp.data[0].revised_prompt,
+          operation: input.referenceImagePaths && input.referenceImagePaths.length > 0 ? 'edit' : 'generate',
+          referenceImages: input.referenceImagePaths || []
         };
 
         return {

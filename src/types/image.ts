@@ -20,6 +20,8 @@ export const imageReqSchema = z.object({
     .describe("Subdirectory within the target project's public folder to save the image (e.g., 'icons')."),
   targetProjectDir: z.string().optional()
     .describe("Absolute path to the target project directory where the image should be saved."),
+  referenceImagePaths: z.array(z.string()).optional()
+    .describe("Optional array of image paths (relative to targetProjectDir's public folder) to use as references for editing or combining images."),
 });
 
 export type ImageRequest = z.infer<typeof imageReqSchema>;

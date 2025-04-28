@@ -7,6 +7,7 @@ It provides a `create_image` tool that takes a text prompt and other parameters,
 ## Features
 
 *   Generates images from text prompts using OpenAI models (`gpt-image-1`, `dall-e-3`, `dall-e-2`).
+*   Edits and combines existing images using reference images with OpenAI's `gpt-image-1` model.
 *   Supports optional branding guidelines via a `brandSignature` parameter.
 *   Allows specifying image size, quality.
 *   Saves generated images to a target project directory specified by the LLM client.
@@ -88,9 +89,10 @@ The MCP client should automatically detect the changes and connect to the server
 
 Once installed and configured, the server provides the `create_image` tool.
 
-*   **Description:** Generates a new image based on a text prompt, optionally applying branding, and saves it to a target project's public folder.
-*   **Detailed Usage & Parameters:** For comprehensive details on parameters (`prompt`, `filename`, `targetProjectDir`, `brandSignature`, `model`, `size`, `quality`, etc.) and guidance on how an LLM should use this tool effectively, please refer to the **detailed documentation comment block at the top of the `src/index.ts` file** in this repository.
-*   **Output:** Returns a JSON object containing `{ ok: true, path: "relative/path/to/image.png", ... }` on success, where `path` is relative to the `public` folder of the `targetProjectDir` provided in the request.
+*   **Description:** Generates a new image based on a text prompt, optionally applying branding, and saves it to a target project's public folder. Can also edit or combine existing images by providing reference images.
+*   **Detailed Usage & Parameters:** For comprehensive details on parameters (`prompt`, `filename`, `targetProjectDir`, `brandSignature`, `model`, `size`, `quality`, `referenceImagePaths`, etc.) and guidance on how an LLM should use this tool effectively, please refer to the **detailed documentation comment block at the top of the `src/index.ts` file** in this repository.
+*   **Image Editing:** When `referenceImagePaths` is provided (an array of paths relative to the target project's public folder), the tool will use OpenAI's image editing capabilities to modify or combine those images based on the prompt. For image editing operations, the model is automatically set to `gpt-image-1`.
+*   **Output:** Returns a JSON object containing `{ ok: true, path: "relative/path/to/image.png", operation: "edit"|"generate", ... }` on success, where `path` is relative to the `public` folder of the `targetProjectDir` provided in the request.
 
 **Example `curl` Test (after starting the server manually for testing):**
 

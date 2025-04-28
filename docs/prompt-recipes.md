@@ -5,6 +5,7 @@
 ## Table of Contents
 
 - [Quick-Start Template](#quick-start-template)
+- [Image Editing with Reference Images](#image-editing-with-reference-images)
 - [Prompt Recipes](#prompt-recipes)
   - [Hero Backgrounds](#hero-backgrounds)
   - [Icons](#icons-1024×1024-transparent)
@@ -23,6 +24,7 @@
 ## Quick-Start Template
 
 ```jsonc
+// For generating images from text prompt:
 {
   "name": "create_image",
   "arguments": {
@@ -36,6 +38,34 @@
   }
 }
 ```
+
+## Image Editing with Reference Images
+
+You can use reference images to edit or combine existing images using OpenAI's `gpt-image-1` model. Add the `referenceImagePaths` parameter with an array of paths to existing images (relative to your target project's public folder).
+
+```jsonc
+// For editing/combining existing images:
+{
+  "name": "create_image",
+  "arguments": {
+    "prompt": "Create a lovely gift basket with these products inside it",
+    "referenceImagePaths": [
+      "products/soap.png",
+      "products/lotion.png",
+      "products/incense.png"
+    ],
+    "filename": "gift-basket.png",
+    "outputPath": "marketing/promo",
+    "targetProjectDir": "/absolute/path/to/project"
+  }
+}
+```
+
+**Note**: When using `referenceImagePaths`:
+- The model is automatically set to `gpt-image-1` (required for image editing)
+- Size parameter is ignored as it's not supported for image editing operations
+- All reference images should exist in your target project's public folder (or subdirectory)
+- Use detailed prompts describing the desired modifications or combinations
 
 ## Prompt Recipes
 
