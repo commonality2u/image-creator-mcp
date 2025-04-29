@@ -47,11 +47,38 @@ class ImageMcpServer {
 
   constructor() {
     console.error("[MCP DEBUG] ImageMcpServer constructor entered."); // Log constructor start
+
+    // Determine resource paths by checking multiple possible locations
+    const findResource = (relativePath: string): string => {
+      // Possible paths (from most to least likely)
+      const possiblePaths = [
+        path.resolve(this.__dirname, '..', relativePath), // Path from dist/ to root
+        path.resolve(this.__dirname, '../..', relativePath), // Path from src/ to root
+        path.resolve(process.cwd(), relativePath), // Current working directory
+      ];
+      
+      for (const p of possiblePaths) {
+        if (fs.existsSync(p)) {
+          console.error(`[MCP DEBUG] Found resource at: ${p}`);
+          return p;
+        }
+      }
+      
+      console.error(`[MCP WARNING] Could not find resource: ${relativePath}, using the first path anyway`);
+      return possiblePaths[0]; // Return the first path even if it doesn't exist
+    };
+
+    // Find resource paths
+    const promptRecipesPath = findResource('docs/prompt-recipes.md');
+    const readmePath = findResource('README.md');
+    
+    console.error(`[MCP DEBUG] Resource paths: prompt-recipes=${promptRecipesPath}, readme=${readmePath}`);
+
     this.server = new Server(
       {
         // Use package name from package.json
         name: '@dfeirstein/image-server',
-        version: '1.0.1', // Match package.json
+        version: '1.0.2', // Match package.json
       },
       {
         capabilities: {
@@ -61,11 +88,11 @@ class ImageMcpServer {
           resources: {
             "docs/prompt-recipes": {
               type: "text/markdown",
-              path: path.resolve(this.__dirname, "../docs/prompt-recipes.md")
+              path: promptRecipesPath
             },
             "docs/readme": {
               type: "text/markdown",
-              path: path.resolve(this.__dirname, "../README.md")
+              path: readmePath
             }
           }
         },
