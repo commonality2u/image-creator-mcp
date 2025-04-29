@@ -49,14 +49,25 @@ class ImageMcpServer {
     console.error("[MCP DEBUG] ImageMcpServer constructor entered."); // Log constructor start
     this.server = new Server(
       {
-        // Use a more specific name if desired
-        name: 'image-mcp-server',
+        // Use package name from package.json
+        name: '@mcp/image-server',
         version: '1.0.0', // Match package.json
       },
       {
         capabilities: {
-          // Also list the tool here for redundancy/potential initialization timing issues
-          tools: { [CREATE_IMAGE_TOOL.name]: CREATE_IMAGE_TOOL }, 
+          // List available tools
+          tools: { [CREATE_IMAGE_TOOL.name]: CREATE_IMAGE_TOOL },
+          // Expose documentation as resources for LLMs to access
+          resources: {
+            "docs/prompt-recipes": {
+              type: "text/markdown",
+              path: path.resolve(this.__dirname, "../../docs/prompt-recipes.md")
+            },
+            "docs/readme": {
+              type: "text/markdown",
+              path: path.resolve(this.__dirname, "../../README.md")
+            }
+          }
         },
       }
     );

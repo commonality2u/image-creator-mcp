@@ -23,6 +23,21 @@ It provides a `create_image` tool that takes a text prompt and other parameters,
 
 ## Installation
 
+### Option 1: NPX Installation (Recommended)
+
+The easiest way to install and use the image server is with NPX. This approach automatically provides updates whenever the server is restarted:
+
+```bash
+# You don't need to install or clone anything - just run this command to test
+npx -y @mcp/image-server@latest
+```
+
+NPX will download the latest version from npm and execute it. The server will be kept up-to-date automatically every time it's launched.
+
+### Option 2: Clone the Repository
+
+If you prefer to have full access to the source code or want to contribute:
+
 1.  **Clone the Repository:**
     ```bash
     git clone <repository-url> image-mcp-server
@@ -53,6 +68,36 @@ To use this server with an MCP client, you need to add its configuration to the 
 
 **Add the following configuration block** inside the main `"mcpServers": { ... }` object in your client's settings file. **Make sure to replace placeholders** with your actual absolute path and API key.
 
+### For NPX Installation (Recommended)
+
+```jsonc
+// Inside "mcpServers": { ... } in your client's settings JSON file:
+
+"image-mcp-server": {
+  "command": "npx",
+  "args": [
+    "-y",                          // Auto-accept installation
+    "@mcp/image-server@latest"     // Always fetch the latest version
+  ],
+  "cwd": "/tmp",                   // Any temporary directory is fine
+  "env": {
+    // IMPORTANT: Replace with your actual OpenAI API Key
+    "OPENAI_API_KEY": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  // --- Standard MCP Settings ---
+  "disabled": false,
+  "autoApprove": [],      // List tool names to auto-approve (e.g., ["create_image"])
+  "transportType": "stdio",
+  "timeout": 60
+}
+
+// Make sure to add a comma before this block if it's not the first server listed!
+```
+
+This configuration will automatically download and run the latest version of the server each time your MCP client starts, ensuring you always have the most recent features and bug fixes.
+
+### For Repository-Based Installation
+
 ```jsonc
 // Inside "mcpServers": { ... } in your client's settings JSON file:
 
@@ -69,10 +114,10 @@ To use this server with an MCP client, you need to add its configuration to the 
     "OPENAI_API_KEY": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
   },
   // --- Standard MCP Settings ---
-  "disabled": false,      // Set to true to temporarily disable
-  "autoApprove": [],      // List tool names to auto-approve (e.g., ["create_image"])
-  "transportType": "stdio", // Communication method
-  "timeout": 60           // Timeout in seconds (optional)
+  "disabled": false,
+  "autoApprove": [],
+  "transportType": "stdio",
+  "timeout": 60
 }
 
 // Make sure to add a comma before this block if it's not the first server listed!
@@ -89,6 +134,26 @@ The MCP client should automatically detect the changes and connect to the server
 ## Tool Usage (`create_image`)
 
 Once installed and configured, the server provides the `create_image` tool.
+
+### Accessing Documentation Resources
+
+The server exposes its documentation as MCP resources which can be accessed by LLMs before crafting prompts:
+
+```xml
+<!-- To access prompt recipes documentation -->
+<access_mcp_resource>
+<server_name>image-mcp-server</server_name>
+<uri>docs/prompt-recipes</uri>
+</access_mcp_resource>
+
+<!-- To access general README documentation -->
+<access_mcp_resource>
+<server_name>image-mcp-server</server_name>
+<uri>docs/readme</uri>
+</access_mcp_resource>
+```
+
+This allows LLMs to read the prompt recipes documentation before crafting image prompts, leading to better results.
 
 *   **Description:** Generates a new image based on a text prompt, optionally applying branding or using a style definition JSON, and saves it to a target project's public folder. Can also edit or combine existing images by providing reference images.
 *   **Detailed Usage & Parameters:** For comprehensive details on parameters (`prompt`, `filename`, `targetProjectDir`, `brandSignature`, `styleDefinitionJSON`, `model`, `size`, `quality`, `background`, `referenceImagePaths`, etc.) and guidance on how an LLM should use this tool effectively, please refer to the **detailed documentation comment block at the top of the `src/index.ts` file** in this repository.

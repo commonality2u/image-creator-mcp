@@ -1,22 +1,35 @@
 {
-  "name": "image-mcp-server",
+  "name": "@mcp/image-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "MCP server for creating, editing, and combining images with OpenAI models",
   "main": "dist/index.js",
+  "bin": {
+    "image-mcp-server": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "docs/prompt-recipes.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "watch:ts": "tsc -w",
     "watch:node": "nodemon",
     "dev": "npm run build && npm-run-all -p watch:*",
     "start": "node dist/index.js",
-    "test": "vitest"
+    "test": "vitest",
+    "prepublishOnly": "npm run build"
   },
   "mcp": {
     "tools": [
       "create_image"
     ]
   },
-  "keywords": [],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["mcp", "image", "openai", "dall-e", "gpt-image-1", "model-context-protocol", "ai"],
   "author": "",
   "license": "ISC",
   "type": "module",
