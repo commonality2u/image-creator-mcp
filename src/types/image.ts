@@ -3,6 +3,8 @@ import { z } from 'zod';
 export const imageReqSchema = z.object({
   prompt: z.string().min(3)
     .describe("Detailed text description of the desired image."),
+  styleDefinitionJSON: z.record(z.any()).optional()
+    .describe("Optional JSON object defining visual style elements like tone, color palette, lighting, composition, etc. Used for consistent style across multiple images."),
   brandSignature: z.string().optional()
     .describe("Optional branding guidelines (e.g., 'palette:#...; font:...')"),
   size: z.enum(['1024x1024', '1024x1536', '1536x1024']).optional().default('1024x1024')

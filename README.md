@@ -9,7 +9,8 @@ It provides a `create_image` tool that takes a text prompt and other parameters,
 *   Generates images from text prompts using OpenAI models (`gpt-image-1`, `dall-e-3`, `dall-e-2`).
 *   Edits and combines existing images using reference images with OpenAI's `gpt-image-1` model.
 *   Supports optional branding guidelines via a `brandSignature` parameter.
-*   Allows specifying image size, quality.
+*   Allows specifying image size, quality, and background type (transparent or opaque).
+*   Supports consistent visual styling through the `styleDefinitionJSON` parameter.
 *   Saves generated images to a target project directory specified by the LLM client.
 *   Includes detailed documentation within the source code (`src/index.ts`) for LLM usage guidance.
 *   Provides unit tests for verification.
@@ -89,9 +90,11 @@ The MCP client should automatically detect the changes and connect to the server
 
 Once installed and configured, the server provides the `create_image` tool.
 
-*   **Description:** Generates a new image based on a text prompt, optionally applying branding, and saves it to a target project's public folder. Can also edit or combine existing images by providing reference images.
-*   **Detailed Usage & Parameters:** For comprehensive details on parameters (`prompt`, `filename`, `targetProjectDir`, `brandSignature`, `model`, `size`, `quality`, `referenceImagePaths`, etc.) and guidance on how an LLM should use this tool effectively, please refer to the **detailed documentation comment block at the top of the `src/index.ts` file** in this repository.
+*   **Description:** Generates a new image based on a text prompt, optionally applying branding or using a style definition JSON, and saves it to a target project's public folder. Can also edit or combine existing images by providing reference images.
+*   **Detailed Usage & Parameters:** For comprehensive details on parameters (`prompt`, `filename`, `targetProjectDir`, `brandSignature`, `styleDefinitionJSON`, `model`, `size`, `quality`, `background`, `referenceImagePaths`, etc.) and guidance on how an LLM should use this tool effectively, please refer to the **detailed documentation comment block at the top of the `src/index.ts` file** in this repository.
+*   **Background Options:** The `background` parameter accepts either 'transparent' or 'opaque' (default) values. Transparent backgrounds are useful for logos, icons, and overlays, and work best with the `gpt-image-1` model. Transparent backgrounds require PNG or WebP format.
 *   **Image Editing:** When `referenceImagePaths` is provided (an array of paths relative to the target project's public folder), the tool will use OpenAI's image editing capabilities to modify or combine those images based on the prompt. For image editing operations, the model is automatically set to `gpt-image-1`.
+*   **Style Definition:** The optional `styleDefinitionJSON` parameter allows you to define a consistent visual style across multiple images. This is especially useful for creating themed image collections with a unified aesthetic. The JSON structure is passed directly to the image model within the prompt, allowing for flexible and expressive style definitions.
 *   **Output:** Returns a JSON object containing `{ ok: true, path: "relative/path/to/image.png", operation: "edit"|"generate", ... }` on success, where `path` is relative to the `public` folder of the `targetProjectDir` provided in the request.
 
 **Example `curl` Test (after starting the server manually for testing):**
@@ -107,6 +110,57 @@ curl -X POST http://localhost:5050/createImage \
         "prompt": "A cute otter mascot",
         "filename": "otter-mascot.png",
         "targetProjectDir": "/path/to/your/target/project"
+      }'
+
+# Example with background parameter for transparent PNG:
+curl -X POST http://localhost:5050/createImage \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "prompt": "A professional logo of a cloud with lightning bolt",
+        "filename": "cloud-logo.png",
+        "model": "gpt-image-1",
+        "background": "transparent",
+        "targetProjectDir": "/path/to/your/target/project"
+      }'
+
+# Example with image editing and transparent background:
+curl -X POST http://localhost:5050/createImage \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "prompt": "Add a glowing blue aura effect around the object",
+        "filename": "enhanced-icon.png",
+        "model": "gpt-image-1",
+        "background": "transparent",
+        "referenceImagePaths": ["existing-icon.png"],
+        "targetProjectDir": "/path/to/your/target/project"
+      }'
+
+# Example with styleDefinitionJSON parameter:
+curl -X POST http://localhost:5050/createImage \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "prompt": "Abstract representation of Litigation",
+        "filename": "litigation-concept.png",
+        "targetProjectDir": "/path/to/your/target/project",
+        "styleDefinitionJSON": {
+          "output_requirements": {
+            "color_mode": "Full Vibrant Color Photography", 
+            "style": "Abstract Conceptual Realism",
+            "quality": "High-end Professional Photo Shoot"
+          },
+          "color_palette": {
+            "primary_accent": {"name": "Primary Blue", "hex": "#1474F3"},
+            "supporting_colors": [
+              {"name": "Deep Navy", "hex": "#1C2B4A"},
+              {"name": "Warm Neutral", "hex": "#E8D7C1"}
+            ],
+            "overall_tone": "Predominantly cool with warm accents"
+          },
+          "strict_exclusions": [
+            "No Black and White or Monochrome output",
+            "No Text or Writing"
+          ]
+        }
       }'
 ```
 *(Note: The server listens on port 5050 only if run directly, not when launched via MCP stdio)*

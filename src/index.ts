@@ -94,6 +94,9 @@ class ImageMcpServer {
 
       let input: ImageRequest;
       try {
+        // Log incoming request arguments for debugging
+        console.error("[MCP DEBUG] Incoming request arguments:", JSON.stringify(request.params.arguments, null, 2));
+        
         // Validate input arguments using the Zod schema
         input = imageReqSchema.parse(request.params.arguments);
       } catch (err) {
@@ -111,20 +114,22 @@ class ImageMcpServer {
 
       // --- Core Image Generation Logic (adapted from Express route) ---
       try {
-        // brandSignature fallback
-        let brandSignature = input.brandSignature;
-        if (!brandSignature) {
-          try {
-            const palettePath = path.resolve(this.__dirname, '../branding/palette.json');
-            const palette = await import(palettePath, { assert: { type: 'json' } }).then(m => m.default);
-            brandSignature = `palette:${Object.values(palette).join(',')}`;
-          } catch {
-            brandSignature = 'palette:#000,#FFF; tone:neutral';
-          }
+        // Create the final prompt using only what was provided in the input
+        // No fallbacks for brandSignature - use exactly what was provided (or undefined)
+        const finalPrompt = buildPrompt(input.prompt, input.brandSignature, input.styleDefinitionJSON);
+        
+        // Log the complete prompt for debugging
+        console.error("[MCP DEBUG] Final prompt being sent to OpenAI:");
+        console.error("---PROMPT START---");
+        console.error(finalPrompt);
+        console.error("---PROMPT END---");
+        
+        // Log style JSON if provided (for debugging)
+        if (input.styleDefinitionJSON) {
+          console.error("[MCP DEBUG] Style definition JSON provided:", 
+            JSON.stringify(input.styleDefinitionJSON, null, 2));
         }
-
-        const finalPrompt = buildPrompt(input.prompt, brandSignature);
-
+        
         // Get OpenAI client instance when needed
         const openai = getOpenAIClient();
         

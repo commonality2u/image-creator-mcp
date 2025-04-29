@@ -6,6 +6,7 @@
 
 - [Quick-Start Template](#quick-start-template)
 - [Image Editing with Reference Images](#image-editing-with-reference-images)
+- [Style Definition JSON](#style-definition-json)
 - [Prompt Recipes](#prompt-recipes)
   - [Hero Backgrounds](#hero-backgrounds)
   - [Icons](#icons-1024×1024-transparent)
@@ -66,6 +67,89 @@ You can use reference images to edit or combine existing images using OpenAI's `
 - Size parameter is ignored as it's not supported for image editing operations
 - All reference images should exist in your target project's public folder (or subdirectory)
 - Use detailed prompts describing the desired modifications or combinations
+
+## Style Definition JSON
+
+The `styleDefinitionJSON` parameter allows you to define a comprehensive visual style once and reuse it across multiple image generations. The JSON structure is passed directly to the image generation model, which can interpret the structured data within the prompt text.
+
+This approach is particularly valuable for:
+
+- Creating themed image collections with unified visual language
+- Maintaining brand consistency across multiple assets
+- Efficiently generating image series where only the subject changes
+- Ensuring consistent style elements like lighting, composition, and color palette
+
+### Example Style Definition JSON
+
+```jsonc
+{
+  "name": "create_image",
+  "arguments": {
+    "prompt": "Abstract representation of Litigation",
+    "styleDefinitionJSON": {
+      "output_requirements": {
+        "color_mode": "Full Vibrant Color Photography", 
+        "style": "Abstract Conceptual Realism",
+        "quality": "High-end Professional Photo Shoot"
+      },
+      "color_palette": {
+        "primary_accent": {"name": "Primary Blue", "hex": "#1474F3"},
+        "supporting_colors": [
+          {"name": "Deep Navy", "hex": "#1C2B4A"},
+          {"name": "Warm Neutral", "hex": "#E8D7C1"}
+        ],
+        "overall_tone": "Predominantly cool with warm accents"
+      },
+      "visual_elements": {
+        "lighting": "Soft directional studio light emphasizing color and texture",
+        "composition": "Clean, minimalist, shallow depth of field",
+        "textures": ["Polished metal", "Premium textured paper", "Smooth glass"],
+        "perspective": "Professional product/still life angle"
+      },
+      "strict_exclusions": [
+        "No Black and White or Monochrome output",
+        "No Text or Writing",
+        "No People or Figures"
+      ]
+    },
+    "quality": "high",
+    "size": "1024x1024",
+    "filename": "litigation-concept.png",
+    "outputPath": "concepts",
+    "targetProjectDir": "/absolute/path/to/project"
+  }
+}
+```
+
+### Style Definition Structure
+
+Your `styleDefinitionJSON` can use any structure that effectively communicates your style requirements. The image model receives the raw JSON structure within the prompt text and can interpret its meaning.
+
+Some effective patterns include:
+
+1. **`output_requirements`**: Overall output specifications
+2. **`color_palette`**: Color scheme definitions including hex values
+3. **`visual_elements`**: Physical aspects like lighting, composition, and textures
+4. **`strict_exclusions`**: Explicit list of elements to avoid in the image
+
+The JSON structure is flexible, allowing you to organize style information in whatever way makes most sense for your use case.
+
+### Prompt Construction
+
+When both `prompt` and `styleDefinitionJSON` are provided, the system constructs a prompt for the image model in this format:
+
+```
+[User Prompt]
+
+--- STYLE DEFINITION (JSON) ---
+{
+  "detailed": "style definition",
+  "in": "JSON format",
+  "with": "all properties"
+}
+```
+
+This allows the image model to receive both your textual description and the structured style definition, using both to guide the image generation process.
 
 ## Prompt Recipes
 
