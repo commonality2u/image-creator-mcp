@@ -49,23 +49,78 @@ class ImageMcpServer {
     console.error("[MCP DEBUG] ImageMcpServer constructor entered."); // Log constructor start
 
     // Determine resource paths by checking multiple possible locations
-    const findResource = (relativePath: string): string => {
-      // Possible paths (from most to least likely)
-      const possiblePaths = [
-        path.resolve(this.__dirname, '..', relativePath), // Path from dist/ to root
-        path.resolve(this.__dirname, '../..', relativePath), // Path from src/ to root
-        path.resolve(process.cwd(), relativePath), // Current working directory
-      ];
+    const findResource = (relativePath: string): string | null => {
+      console.error(`[MCP DEBUG] Looking for resource: ${relativePath}`);
+      console.error(`[MCP DEBUG] Working directory: ${process.cwd()}`);
+      console.error(`[MCP DEBUG] Script directory: ${this.__dirname}`);
       
-      for (const p of possiblePaths) {
-        if (fs.existsSync(p)) {
-          console.error(`[MCP DEBUG] Found resource at: ${p}`);
-          return p;
+      try {
+        // Get the module path (where the npm package is installed)
+        const modulePath = path.dirname(require.resolve('@dfeirstein/image-server/package.json', { paths: [process.cwd(), this.__dirname] }));
+        console.error(`[MCP DEBUG] Module path: ${modulePath}`);
+        
+        // Possible paths (from most to least likely)
+        const possiblePaths = [
+          path.resolve(modulePath, relativePath), // Direct from npm module root
+          path.resolve(this.__dirname, '..', relativePath), // Path from dist/ to root
+          path.resolve(this.__dirname, '../..', relativePath), // Path from src/ to root
+          path.resolve(process.cwd(), relativePath), // Current working directory
+          // NPX specific paths
+          path.resolve(process.env.npm_config_local_prefix || '', 'node_modules/@dfeirstein/image-server', relativePath),
+        ];
+        
+        console.error('[MCP DEBUG] Checking possible paths:');
+        for (const p of possiblePaths) {
+          console.error(`[MCP DEBUG] - Checking: ${p}`);
+          if (fs.existsSync(p)) {
+            console.error(`[MCP DEBUG] Found resource at: ${p}`);
+            // Read the first few lines to verify it's the right file
+            try {
+              const content = fs.readFileSync(p, 'utf8').slice(0, 200);
+              console.error(`[MCP DEBUG] First 200 chars: ${content.replace(/\n/g, '\\n')}`);
+            } catch (err: any) {
+              console.error(`[MCP DEBUG] Could not read file: ${err.message}`);
+            }
+            return p;
+          }
+        }
+      } catch (err: any) {
+        console.error(`[MCP DEBUG] Error resolving paths: ${err.message}`);
+      }
+      
+      console.error(`[MCP WARNING] Could not find resource: ${relativePath}`);
+      
+      // Instead of returning a non-existent path, use embedded content
+      if (relativePath === 'docs/prompt-recipes.md') {
+        const embeddedPath = path.join(this.__dirname, 'embedded-prompt-recipes.md');
+        // Create an embedded copy of the file
+        try {
+          const content = `# Prompt Recipes for Image Generation
+
+This is embedded documentation for the image-mcp-server. The server couldn't find the prompt-recipes.md file, so it's providing this embedded version instead.
+
+## Basic Prompt Structure
+
+A good prompt should include:
+1. Subject description (what/who)
+2. Style details (photorealistic, cartoon, etc.)
+3. Lighting and mood
+4. Technical specifications (if needed)
+
+## Examples
+
+### Icon Design
+"A minimalist cloud icon with subtle gradient, clean lines, professional tech style, light blue color scheme"
+`;
+          fs.writeFileSync(embeddedPath, content);
+          console.error(`[MCP DEBUG] Created embedded resource at: ${embeddedPath}`);
+          return embeddedPath;
+        } catch (err: any) {
+          console.error(`[MCP DEBUG] Failed to create embedded resource: ${err.message}`);
         }
       }
       
-      console.error(`[MCP WARNING] Could not find resource: ${relativePath}, using the first path anyway`);
-      return possiblePaths[0]; // Return the first path even if it doesn't exist
+      return null; // Return null to indicate resource not found
     };
 
     // Find resource paths
@@ -78,7 +133,7 @@ class ImageMcpServer {
       {
         // Use package name from package.json
         name: '@dfeirstein/image-server',
-        version: '1.0.2', // Match package.json
+        version: '1.0.3', // Match package.json
       },
       {
         capabilities: {
