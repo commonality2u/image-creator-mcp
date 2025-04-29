@@ -50,7 +50,7 @@ class ImageMcpServer {
     this.server = new Server(
       {
         // Use package name from package.json
-        name: '@mcp/image-server',
+        name: '@dfeirstein/image-server',
         version: '1.0.0', // Match package.json
       },
       {

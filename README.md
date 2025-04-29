@@ -29,7 +29,7 @@ The easiest way to install and use the image server is with NPX. This approach a
 
 ```bash
 # You don't need to install or clone anything - just run this command to test
-npx -y @mcp/image-server@latest
+npx -y @dfeirstein/image-server@latest
 ```
 
 NPX will download the latest version from npm and execute it. The server will be kept up-to-date automatically every time it's launched.
@@ -77,7 +77,7 @@ To use this server with an MCP client, you need to add its configuration to the 
   "command": "npx",
   "args": [
     "-y",                          // Auto-accept installation
-    "@mcp/image-server@latest"     // Always fetch the latest version
+    "@dfeirstein/image-server@latest"     // Always fetch the latest version
   ],
   "cwd": "/tmp",                   // Any temporary directory is fine
   "env": {
