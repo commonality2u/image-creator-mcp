@@ -123,33 +123,125 @@ A good prompt should include:
       return null; // Return null to indicate resource not found
     };
 
-    // Find resource paths
-    const promptRecipesPath = findResource('docs/prompt-recipes.md');
-    const readmePath = findResource('README.md');
+    // Create resources object with only valid resources
+    const resources: Record<string, { type: string; path: string }> = {};
     
-    console.error(`[MCP DEBUG] Resource paths: prompt-recipes=${promptRecipesPath}, readme=${readmePath}`);
+    // Find and add prompt recipes
+    const promptRecipesPath = findResource('docs/prompt-recipes.md');
+    if (promptRecipesPath) {
+      console.error(`[MCP DEBUG] Adding prompt-recipes resource at path: ${promptRecipesPath}`);
+      resources["docs/prompt-recipes"] = {
+        type: "text/markdown",
+        path: promptRecipesPath
+      };
+    } else {
+      // Create embedded resource for prompt recipes
+      const embeddedPath = path.join(this.__dirname, 'embedded-prompt-recipes.md');
+      try {
+        // Create more comprehensive embedded content - this is important to actually save the file
+        const content = `# Prompt Recipes for Image Generation
+
+This is embedded documentation for the image-mcp-server. The server couldn't find the prompt-recipes.md file, so it's providing this embedded version instead.
+
+## Basic Prompt Structure
+
+A good prompt should include:
+1. Subject description (what/who)
+2. Style details (photorealistic, cartoon, etc.)
+3. Lighting and mood
+4. Technical specifications (if needed)
+
+## Examples
+
+### Icon Design
+"A minimalist cloud icon with subtle gradient, clean lines, professional tech style, light blue color scheme"
+
+### Photorealistic Portrait
+"Professional headshot of a middle-aged business executive, neutral expression, studio lighting, high-end DSLR quality, shallow depth of field"
+
+### Background/Hero Image
+"Abstract technology background with blue and purple gradient, subtle digital patterns, modern and clean design, suitable for header/hero section"
+
+### Product Visualization
+"3D render of a sleek smartphone on a minimalist surface, dramatic lighting from top-right, professional product photography style"
+`;
+        fs.writeFileSync(embeddedPath, content);
+        console.error(`[MCP DEBUG] Created and added embedded prompt-recipes resource at: ${embeddedPath}`);
+        resources["docs/prompt-recipes"] = {
+          type: "text/markdown",
+          path: embeddedPath
+        };
+      } catch (err: any) {
+        console.error(`[MCP ERROR] Failed to create embedded prompt-recipes: ${err.message}`);
+      }
+    }
+    
+    // Find and add readme
+    const readmePath = findResource('README.md');
+    if (readmePath) {
+      console.error(`[MCP DEBUG] Adding readme resource at path: ${readmePath}`);
+      resources["docs/readme"] = {
+        type: "text/markdown",
+        path: readmePath
+      };
+    } else {
+      // Create embedded resource for readme
+      const embeddedPath = path.join(this.__dirname, 'embedded-readme.md');
+      try {
+        const content = `# Image MCP Server
+
+This MCP server provides image generation capabilities using OpenAI's API.
+
+## Usage
+
+The server provides the \`create_image\` tool for generating images from text prompts.
+
+Key parameters:
+- prompt: Text description of the desired image
+- model: OpenAI model to use (gpt-image-1, dall-e-3, dall-e-2)
+- size: Image dimensions (1024x1024, 1024x1536, 1536x1024)
+- quality: Image quality (low, medium, high)
+- background: Type of background (transparent, opaque)
+`;
+        fs.writeFileSync(embeddedPath, content);
+        console.error(`[MCP DEBUG] Created and added embedded readme resource at: ${embeddedPath}`);
+        resources["docs/readme"] = {
+          type: "text/markdown",
+          path: embeddedPath
+        };
+      } catch (err: any) {
+        console.error(`[MCP ERROR] Failed to create embedded readme: ${err.message}`);
+      }
+    }
+    
+    // Show summary of resources being registered
+    console.error(`[MCP DEBUG] Registering ${Object.keys(resources).length} resources:`);
+    for (const [key, resource] of Object.entries(resources)) {
+      console.error(`[MCP DEBUG] - ${key}: ${resource.path} (${resource.type})`);
+      // Verify file exists and is readable
+      try {
+        const stats = fs.statSync(resource.path);
+        console.error(`[MCP DEBUG]   File exists: ${stats.isFile()}, size: ${stats.size} bytes`);
+        // Read the first 100 characters to verify content
+        const content = fs.readFileSync(resource.path, 'utf8').slice(0, 100);
+        console.error(`[MCP DEBUG]   Content preview: ${content.replace(/\n/g, ' ')}`);
+      } catch (err: any) {
+        console.error(`[MCP ERROR]   Error checking resource file: ${err.message}`);
+      }
+    }
 
     this.server = new Server(
       {
         // Use package name from package.json
         name: '@dfeirstein/image-server',
-        version: '1.0.3', // Match package.json
+        version: '1.0.4', // Match package.json
       },
       {
         capabilities: {
           // List available tools
           tools: { [CREATE_IMAGE_TOOL.name]: CREATE_IMAGE_TOOL },
           // Expose documentation as resources for LLMs to access
-          resources: {
-            "docs/prompt-recipes": {
-              type: "text/markdown",
-              path: promptRecipesPath
-            },
-            "docs/readme": {
-              type: "text/markdown",
-              path: readmePath
-            }
-          }
+          resources: resources
         },
       }
     );
