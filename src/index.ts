@@ -51,7 +51,7 @@ class ImageMcpServer {
       {
         // Use package name from package.json
         name: '@dfeirstein/image-server',
-        version: '1.0.0', // Match package.json
+        version: '1.0.1', // Match package.json
       },
       {
         capabilities: {
@@ -61,11 +61,11 @@ class ImageMcpServer {
           resources: {
             "docs/prompt-recipes": {
               type: "text/markdown",
-              path: path.resolve(this.__dirname, "../../docs/prompt-recipes.md")
+              path: path.resolve(this.__dirname, "../docs/prompt-recipes.md")
             },
             "docs/readme": {
               type: "text/markdown",
-              path: path.resolve(this.__dirname, "../../README.md")
+              path: path.resolve(this.__dirname, "../README.md")
             }
           }
         },
