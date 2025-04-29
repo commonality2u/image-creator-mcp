@@ -1,6 +1,6 @@
 {
   "name": "@dfeirstein/image-server",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "MCP server for creating, editing, and combining images with OpenAI models",
   "main": "dist/index.js",
   "bin": {

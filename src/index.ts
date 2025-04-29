@@ -5,6 +5,8 @@ import {
   CallToolRequestSchema,
   ErrorCode,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
   McpError,
   Tool, // Import Tool type
 } from '@modelcontextprotocol/sdk/types.js';
@@ -230,31 +232,152 @@ Key parameters:
       }
     }
 
+    // Create and store embedded docs for direct access
+    this.embeddedDocs = new Map<string, string>();
+    
+    // Create embedded prompt recipes if needed
+    if (!promptRecipesPath) {
+      const content = `# Prompt Recipes for Image Generation
+
+This is embedded documentation for the image-mcp-server. The server couldn't find the prompt-recipes.md file, so it's providing this embedded version instead.
+
+## Basic Prompt Structure
+
+A good prompt should include:
+1. Subject description (what/who)
+2. Style details (photorealistic, cartoon, etc.)
+3. Lighting and mood
+4. Technical specifications (if needed)
+
+## Examples
+
+### Icon Design
+"A minimalist cloud icon with subtle gradient, clean lines, professional tech style, light blue color scheme"
+
+### Photorealistic Portrait
+"Professional headshot of a middle-aged business executive, neutral expression, studio lighting, high-end DSLR quality, shallow depth of field"
+
+### Background/Hero Image
+"Abstract technology background with blue and purple gradient, subtle digital patterns, modern and clean design, suitable for header/hero section"
+
+### Product Visualization
+"3D render of a sleek smartphone on a minimalist surface, dramatic lighting from top-right, professional product photography style"`;
+      
+      this.embeddedDocs.set("docs/prompt-recipes", content);
+      console.error(`[MCP DEBUG] Created embedded prompt recipes content`);
+    } else {
+      try {
+        const content = fs.readFileSync(promptRecipesPath, 'utf8');
+        this.embeddedDocs.set("docs/prompt-recipes", content);
+        console.error(`[MCP DEBUG] Loaded prompt recipes from file: ${promptRecipesPath}`);
+      } catch (err: any) {
+        console.error(`[MCP ERROR] Failed to read prompt recipes file: ${err.message}`);
+      }
+    }
+    
+    // Create embedded readme if needed
+    if (!readmePath) {
+      const content = `# Image MCP Server
+
+This MCP server provides image generation capabilities using OpenAI's API.
+
+## Usage
+
+The server provides the \`create_image\` tool for generating images from text prompts.
+
+Key parameters:
+- prompt: Text description of the desired image
+- model: OpenAI model to use (gpt-image-1, dall-e-3, dall-e-2)
+- size: Image dimensions (1024x1024, 1024x1536, 1536x1024)
+- quality: Image quality (low, medium, high)
+- background: Type of background (transparent, opaque)`;
+      
+      this.embeddedDocs.set("docs/readme", content);
+      console.error(`[MCP DEBUG] Created embedded readme content`);
+    } else {
+      try {
+        const content = fs.readFileSync(readmePath, 'utf8');
+        this.embeddedDocs.set("docs/readme", content);
+        console.error(`[MCP DEBUG] Loaded readme from file: ${readmePath}`);
+      } catch (err: any) {
+        console.error(`[MCP ERROR] Failed to read readme file: ${err.message}`);
+      }
+    }
+    
+    // Initialize server with empty resources - we'll handle them directly
     this.server = new Server(
       {
         // Use package name from package.json
         name: '@dfeirstein/image-server',
-        version: '1.0.4', // Match package.json
+        version: '1.0.5', // Match package.json
       },
       {
         capabilities: {
-          // List available tools
           tools: { [CREATE_IMAGE_TOOL.name]: CREATE_IMAGE_TOOL },
-          // Expose documentation as resources for LLMs to access
-          resources: resources
+          resources: {}, // Empty resources - we'll handle them with request handlers
         },
       }
     );
     console.error("[MCP DEBUG] MCP SDK Server instance created."); // Log SDK server creation
 
-     this.setupToolHandlers();
+    // Set up resource handlers that work more reliably
+    this.setupResourceHandlers();
+    this.setupToolHandlers();
 
-     // Basic error logging
-     this.server.onerror = (error: any) => console.error('[MCP Error]', error); // Explicit any type
-     process.on('SIGINT', async () => {
-       await this.server.close();
-       process.exit(0);
+    // Basic error logging
+    this.server.onerror = (error: any) => console.error('[MCP Error]', error); // Explicit any type
+    process.on('SIGINT', async () => {
+      await this.server.close();
+      process.exit(0);
     });
+  }
+  
+  private embeddedDocs: Map<string, string>;
+  
+  private setupResourceHandlers() {
+    console.error("[MCP DEBUG] Setting up resource handlers");
+    
+    // Handle resource listing
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+      console.error("[MCP DEBUG] Handling ListResourcesRequest");
+      return {
+        resources: [
+          {
+            uri: "docs/prompt-recipes",
+            name: "Prompt Recipes for Image Generation",
+            mimeType: "text/markdown",
+          },
+          {
+            uri: "docs/readme",
+            name: "Image MCP Server Documentation",
+            mimeType: "text/markdown",
+          }
+        ]
+      };
+    });
+    
+    // Handle resource reading
+    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      const uri = request.params.uri.toString();
+      console.error(`[MCP DEBUG] Handling ReadResourceRequest for ${uri}`);
+      
+      if (this.embeddedDocs.has(uri)) {
+        const content = this.embeddedDocs.get(uri);
+        console.error(`[MCP DEBUG] Returning content for ${uri} (${content?.length} bytes)`);
+        return {
+          contents: [{
+            uri,
+            mimeType: "text/markdown",
+            text: content,
+          }]
+        };
+      }
+      
+      console.error(`[MCP ERROR] Resource not found: ${uri}`);
+      throw new Error(`Resource not found: ${uri}`);
+    });
+    
+    console.error("[MCP DEBUG] Resource handlers set up successfully");
   }
 
   private setupToolHandlers() {
